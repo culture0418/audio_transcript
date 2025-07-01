@@ -3,26 +3,33 @@ from db import DB
 from transcript import AudioTranscription
 import os
 from werkzeug.utils import secure_filename
+import threading
+import uuid
 
 app = Flask(__name__, static_folder='static')
 app.config['UPLOAD_FOLDER'] = 'uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# 登入 API
+# 全域進度字典
+progress_dict = {}
+
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
     username = data.get('username')
     password = data.get('password')
+    if not username or not password:
+        return jsonify({'success': False, 'error': '請提供帳號和密碼'})
     try:
-        if password == "kslab":
-            return jsonify({'success': True})
+        if username != "kslab":
+            return jsonify({'success': False, 'error': '帳號錯誤'})
+        elif password != "kslab":
+            return jsonify({'success': False, 'error': '密碼錯誤'})
         else:
-            return jsonify({'success': False, 'error': '帳號或密碼錯誤'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+            return jsonify({'success': True})
     finally:
-        print(f"Login attempt: username={username}, success={password == 'kslab'}")
+        pass
+
 
 # 音訊檔案上傳與轉錄 API
 @app.route('/api/transcribe', methods=['POST'])
@@ -37,15 +44,37 @@ def transcribe():
     filename = secure_filename(file.filename)
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(file_path)
-    try:
-        transcriber = AudioTranscription(model_size=model_size, language=language)
-        result = transcriber.transcribe_with_progress(file_path)
-        return jsonify({'success': True, 'result': result})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-    finally:
-        if os.path.exists(file_path):
-            os.remove(file_path)
+    task_id = str(uuid.uuid4())
+    progress_dict[task_id] = 0
+    def run_transcribe():
+        try:
+            transcriber = AudioTranscription(model_size=model_size, language=language)
+            def progress_cb(percent):
+                progress_dict[task_id] = percent
+            result = transcriber.transcribe_with_progress(file_path, progress_callback=progress_cb)
+            progress_dict[task_id] = 100
+            progress_dict[task_id+'_result'] = result
+        except Exception as e:
+            progress_dict[task_id] = -1
+            progress_dict[task_id+'_error'] = str(e)
+        finally:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+    threading.Thread(target=run_transcribe).start()
+    return jsonify({'success': True, 'task_id': task_id})
+
+# 查詢進度 API
+@app.route('/api/progress/<task_id>')
+def progress(task_id):
+    percent = progress_dict.get(task_id, 0)
+    if percent == 100:
+        result = progress_dict.get(task_id+'_result', '')
+        return jsonify({'progress': 100, 'done': True, 'result': result})
+    elif percent == -1:
+        error = progress_dict.get(task_id+'_error', '未知錯誤')
+        return jsonify({'progress': 0, 'done': True, 'error': error})
+    else:
+        return jsonify({'progress': percent, 'done': False})
 
 # 轉錄結果下載（可選）
 @app.route('/api/download/<filename>')

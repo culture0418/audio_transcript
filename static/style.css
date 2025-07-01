@@ -6,7 +6,7 @@ body {
 }
 
 .login-container, .main-container {
-    max-width: 500px;
+    max-width: 800px;
     margin: 60px auto;
     background: #fff;
     border-radius: 12px;
@@ -38,10 +38,11 @@ button {
     color: #fff;
     border: none;
     border-radius: 6px;
-    padding: 10px 0;
+    padding: 15px 10px;
     font-size: 16px;
     cursor: pointer;
     margin-top: 8px;
+    margin-bottom: 8px;
     transition: background 0.2s;
 }
 button:disabled {

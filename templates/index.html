@@ -107,41 +107,59 @@
         }
     });
 
-    // 執行轉錄（串接後端 API）
+    // 執行轉錄（串接後端 API，支援實際進度條）
     document.getElementById('transcribe-btn').addEventListener('click', async function() {
         if(!selectedFile) return;
         document.getElementById('progress').style.display = 'block';
         document.getElementById('progress-bar').style.width = '0%';
-        document.getElementById('result').textContent = '';
+        document.getElementById('result').textContent = '正在分析中…請稍候';
         const model = document.getElementById('model-select').value;
         const language = document.getElementById('lang-select').value;
         const formData = new FormData();
         formData.append('file', selectedFile);
         formData.append('model', model);
         formData.append('language', language);
-        // 前端模擬進度條
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += 10;
-            document.getElementById('progress-bar').style.width = progress + '%';
-        }, 300);
+        // 送出檔案，取得 task_id
+        let task_id = null;
         try {
             const res = await fetch('/api/transcribe', {
                 method: 'POST',
                 body: formData
             });
             const data = await res.json();
-            clearInterval(interval);
-            document.getElementById('progress-bar').style.width = '100%';
-            if(data.success) {
-                document.getElementById('result').textContent = data.result;
-            } else {
+            if(!data.success) {
                 document.getElementById('result').textContent = '錯誤：' + (data.error || '轉錄失敗');
+                document.getElementById('progress').style.display = 'none';
+                return;
             }
+            task_id = data.task_id;
         } catch (err) {
-            clearInterval(interval);
             document.getElementById('result').textContent = '連線錯誤';
+            document.getElementById('progress').style.display = 'none';
+            return;
         }
+        // 輪詢進度
+        async function pollProgress() {
+            try {
+                const res = await fetch(`/api/progress/${task_id}`);
+                const data = await res.json();
+                document.getElementById('progress-bar').style.width = data.progress + '%';
+                if(data.done) {
+                    if(data.result) {
+                        document.getElementById('result').textContent = data.result;
+                    } else if(data.error) {
+                        document.getElementById('result').textContent = '錯誤：' + data.error;
+                    }
+                    document.getElementById('progress-bar').style.width = '100%';
+                    return;
+                } else {
+                    setTimeout(pollProgress, 800);
+                }
+            } catch (err) {
+                document.getElementById('result').textContent = '連線錯誤';
+            }
+        }
+        pollProgress();
     });
     </script>
 </body>

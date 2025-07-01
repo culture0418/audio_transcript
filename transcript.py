@@ -1,4 +1,6 @@
 import whisper
+import time
+import os
 
 class AudioTranscription:
     def __init__(self, model_size: str = "base", language: str = "en"):
@@ -6,15 +8,17 @@ class AudioTranscription:
         self.language = language
         self.model = whisper.load_model(model_size)
 
-    def transcribe_with_progress(self, audio_path: str) -> str:
-        """
-        讀取音訊檔案（支援 .wav, .mp3, .m4a 等格式）並使用 Whisper 進行轉錄，顯示進度條。
-        參數：
-        - audio_path: 音訊檔案路徑，例如 "audio.wav" 或 "audio.mp3"
-        回傳：
-        - 完整的轉錄文字
-        """
+    def transcribe_with_progress(self, audio_path: str, progress_callback=None) -> str:
+        # 模擬進度條到 70%
+        total_steps = 10
+        for i in range(total_steps):
+            time.sleep(3)  # 可依實際情況調整
+            if progress_callback:
+                progress_callback(int((i+1)/total_steps*70))
+        # 實際轉錄
         result = self.model.transcribe(audio_path, language=self.language, verbose=True)
+        if progress_callback:
+            progress_callback(100)
         return result["text"].strip()
 
 # test code
