@@ -1,0 +1,140 @@
+body {
+    font-family: 'Noto Sans TC', Arial, sans-serif;
+    background: #f4f6fb;
+    margin: 0;
+    padding: 0;
+}
+
+.login-container, .main-container {
+    max-width: 500px;
+    margin: 60px auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+    padding: 32px 28px 24px 28px;
+}
+
+h2 {
+    text-align: center;
+    color: #2d3a4b;
+    margin-bottom: 24px;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+input[type="text"], input[type="password"] {
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 16px;
+}
+
+button {
+    background: #4f8cff;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 0;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background 0.2s;
+}
+button:disabled {
+    background: #b3c7f7;
+    cursor: not-allowed;
+}
+button:hover:not(:disabled) {
+    background: #2563eb;
+}
+
+.login-error {
+    color: #e53e3e;
+    text-align: center;
+    margin-top: 10px;
+}
+
+.upload-area {
+    border: 2px dashed #4f8cff;
+    border-radius: 8px;
+    background: #f0f6ff;
+    padding: 36px 0;
+    text-align: center;
+    color: #4f8cff;
+    font-size: 18px;
+    margin-bottom: 18px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    position: relative;
+}
+.upload-area input[type="file"] {
+    display: none;
+}
+.upload-area.dragover {
+    background: #e0eaff;
+    border-color: #2563eb;
+}
+
+.progress {
+    width: 100%;
+    background: #e5e7eb;
+    border-radius: 6px;
+    margin: 18px 0 10px 0;
+    height: 18px;
+    overflow: hidden;
+}
+.progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #4f8cff, #2563eb);
+    transition: width 0.3s;
+}
+
+.result {
+    background: #f9fafb;
+    border-radius: 6px;
+    padding: 16px;
+    margin-top: 10px;
+    min-height: 40px;
+    color: #222;
+    font-size: 16px;
+    word-break: break-all;
+}
+
+.select-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+    justify-content: center;
+}
+.select-row label {
+    font-size: 15px;
+    color: #2d3a4b;
+    margin-right: 4px;
+}
+.select-row select {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    font-size: 15px;
+    background: #f0f6ff;
+    color: #222;
+    outline: none;
+    transition: border 0.2s;
+}
+.select-row select:focus {
+    border: 1.5px solid #4f8cff;
+}
+
+.file-info {
+    margin-bottom: 10px;
+    color: #2563eb;
+    font-size: 15px;
+    text-align: center;
+    word-break: break-all;
+}

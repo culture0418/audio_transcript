@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音訊轉錄系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="login-container" id="login-container">
+        <h2>使用者登入</h2>
+        <form id="login-form">
+            <input type="text" id="username" placeholder="帳號" required>
+            <input type="password" id="password" placeholder="密碼" required>
+            <button type="submit">登入</button>
+        </form>
+        <div class="login-error" id="login-error"></div>
+    </div>
+
+    <div class="main-container" id="main-container" style="display:none;">
+        <h2>音訊檔案上傳與轉錄</h2>
+        <div class="select-row">
+            <label for="model-select">模型選擇：</label>
+            <select id="model-select">
+                <option value="tiny">tiny</option>
+                <option value="base" selected>base</option>
+                <option value="small">small</option>
+                <option value="medium">medium</option>
+                <option value="large">large</option>
+            </select>
+            <label for="lang-select">語言選擇：</label>
+            <select id="lang-select">
+                <option value="en" selected>英文</option>
+                <option value="zh">中文</option>
+            </select>
+        </div>
+        <div class="upload-area" id="upload-area">
+            <p>拖曳音訊檔案到這裡，或點擊選擇檔案</p>
+            <input type="file" id="file-input" accept="audio/*">
+        </div>
+        <div class="file-info" id="file-info"></div>
+        <button id="transcribe-btn" disabled>執行轉錄</button>
+        <div class="progress" id="progress" style="display:none;">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+    // 登入串接後端
+    document.getElementById('login-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if(data.success) {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('main-container').style.display = 'block';
+        } else {
+            document.getElementById('login-error').textContent = data.error || '登入失敗';
+        }
+    });
+
+    // 拖曳與選擇檔案
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('file-input');
+    const fileInfo = document.getElementById('file-info');
+    let selectedFile = null;
+
+    function showFileInfo(file) {
+        if(file) {
+            fileInfo.textContent = `已選擇檔案：${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`;
+        } else {
+            fileInfo.textContent = '';
+        }
+    }
+
+    uploadArea.addEventListener('click', () => fileInput.click());
+    uploadArea.addEventListener('dragover', e => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    uploadArea.addEventListener('dragleave', e => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+    uploadArea.addEventListener('drop', e => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        if(e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            selectedFile = e.dataTransfer.files[0];
+            showFileInfo(selectedFile);
+            document.getElementById('transcribe-btn').disabled = false;
+        }
+    });
+    fileInput.addEventListener('change', e => {
+        if(fileInput.files.length) {
+            selectedFile = fileInput.files[0];
+            showFileInfo(selectedFile);
+            document.getElementById('transcribe-btn').disabled = false;
+        }
+    });
+
+    // 執行轉錄（串接後端 API）
+    document.getElementById('transcribe-btn').addEventListener('click', async function() {
+        if(!selectedFile) return;
+        document.getElementById('progress').style.display = 'block';
+        document.getElementById('progress-bar').style.width = '0%';
+        document.getElementById('result').textContent = '';
+        const model = document.getElementById('model-select').value;
+        const language = document.getElementById('lang-select').value;
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('model', model);
+        formData.append('language', language);
+        // 前端模擬進度條
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 10;
+            document.getElementById('progress-bar').style.width = progress + '%';
+        }, 300);
+        try {
+            const res = await fetch('/api/transcribe', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            clearInterval(interval);
+            document.getElementById('progress-bar').style.width = '100%';
+            if(data.success) {
+                document.getElementById('result').textContent = data.result;
+            } else {
+                document.getElementById('result').textContent = '錯誤：' + (data.error || '轉錄失敗');
+            }
+        } catch (err) {
+            clearInterval(interval);
+            document.getElementById('result').textContent = '連線錯誤';
+        }
+    });
+    </script>
+</body>
+</html>
