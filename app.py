@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, render_template
 from db import DB
 from transcript import AudioTranscription
 import os
@@ -14,19 +14,15 @@ def login():
     data = request.json
     username = data.get('username')
     password = data.get('password')
-    db = DB()
     try:
-        db.connect()
-        cursor = db.execute("SELECT password FROM users WHERE username=%s", (username,))
-        row = cursor.fetchone()
-        if row and row[0] == password:
+        if password == "kslab":
             return jsonify({'success': True})
         else:
             return jsonify({'success': False, 'error': '帳號或密碼錯誤'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
     finally:
-        db.close()
+        print(f"Login attempt: username={username}, success={password == 'kslab'}")
 
 # 音訊檔案上傳與轉錄 API
 @app.route('/api/transcribe', methods=['POST'])
@@ -59,8 +55,8 @@ def download(filename):
 # 靜態檔案服務首頁
 @app.route('/')
 def root():
-    print('Serving index.html from', app.static_folder)
-    return send_from_directory(app.static_folder, 'index.html')
+    print('Serving index.html from templates')
+    return render_template('index.html')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
