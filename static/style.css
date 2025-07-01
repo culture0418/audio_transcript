@@ -53,6 +53,18 @@ button:hover:not(:disabled) {
     background: #2563eb;
 }
 
+#copy-btn {
+    background: #45c2a9;
+    border-radius: 6px;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+#copy-btn:hover {
+    background: #21897a;
+}
+
 .login-error {
     color: #e53e3e;
     text-align: center;
