@@ -19,35 +19,40 @@
 
     <div class="main-container" id="main-container" style="display:none;">
         <h2>音訊檔案上傳與轉錄</h2>
-        <div class="select-row">
-            <label for="model-select">模型選擇：</label>
-            <select id="model-select">
-                <option value="tiny">tiny</option>
-                <option value="base" selected>base</option>
-                <option value="small">small</option>
-                <option value="medium">medium</option>
-                <option value="large">large</option>
-            </select>
-            <label for="lang-select">語言選擇：</label>
-            <select id="lang-select">
-                <option value="en" selected>英文</option>
-                <option value="zh">中文</option>
-            </select>
+        <div class="upload-section">
+            <div class="select-row">
+                <label for="model-select">模型選擇：</label>
+                <select id="model-select">
+                    <option value="tiny">tiny</option>
+                    <option value="base" selected>base</option>
+                    <option value="small">small</option>
+                    <option value="medium">medium</option>
+                    <option value="large">large</option>
+                </select>
+                <label for="lang-select">語言選擇：</label>
+                <select id="lang-select">
+                    <option value="en" selected>英文</option>
+                    <option value="zh">中文</option>
+                </select>
+            </div>
+            <div class="upload-area" id="upload-area">
+                <p>拖曳音訊檔案到這裡，或點擊選擇檔案</p>
+                <input type="file" id="file-input" accept="audio/*">
+            </div>
+            <div class="file-info" id="file-info"></div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <button id="transcribe-btn" disabled>執行轉錄</button>
+                <button id="copy-btn">複製</button>
+                <button id="download-word-btn">下載 Word</button>
+            </div>
+            <div class="progress" id="progress" style="display:none;">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
         </div>
-        <div class="upload-area" id="upload-area">
-            <p>拖曳音訊檔案到這裡，或點擊選擇檔案</p>
-            <input type="file" id="file-input" accept="audio/*">
+        <div class="main-content" style="height: 75vh; display: flex; gap: 24px;">
+            <div class="origin-area" id="origin-area" style="flex: 1; min-width: 0; background: #f9fafb; border-radius: 6px; padding: 16px; overflow-y: auto; min-height: 300px;"></div>
+            <div class="summary-area" id="summary-area" style="flex: 1; min-width: 0; background: #f9fafb; border-radius: 6px; padding: 16px; overflow-y: auto; min-height: 300px;"></div>
         </div>
-        <div class="file-info" id="file-info"></div>
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-            <button id="transcribe-btn" disabled>執行轉錄</button>
-            <button id="copy-btn">複製</button>
-            <button id="download-word-btn">下載 Word</button>
-        </div>
-        <div class="progress" id="progress" style="display:none;">
-            <div class="progress-bar" id="progress-bar"></div>
-        </div>
-        <div class="result" id="result"></div>
     </div>
 
     <script>
@@ -111,19 +116,24 @@
         }
     });
 
-    // 執行轉錄（串接後端 API，支援實際進度條）
+    // 轉錄完成時顯示在左側 origin-area
+    function showOriginResult(text) {
+        document.getElementById('origin-area').textContent = text;
+    }
+
+    // 轉錄流程
     document.getElementById('transcribe-btn').addEventListener('click', async function() {
         if(!selectedFile) return;
         document.getElementById('progress').style.display = 'block';
         document.getElementById('progress-bar').style.width = '0%';
-        document.getElementById('result').textContent = '正在分析中…請稍候';
+        document.getElementById('origin-area').textContent = '正在分析中…請稍候';
+        document.getElementById('summary-area').textContent = '';
         const model = document.getElementById('model-select').value;
         const language = document.getElementById('lang-select').value;
         const formData = new FormData();
         formData.append('file', selectedFile);
         formData.append('model', model);
         formData.append('language', language);
-        // 送出檔案，取得 task_id
         let task_id = null;
         try {
             const res = await fetch('/api/transcribe', {
@@ -132,17 +142,16 @@
             });
             const data = await res.json();
             if(!data.success) {
-                document.getElementById('result').textContent = '錯誤：' + (data.error || '轉錄失敗');
+                showOriginResult('錯誤：' + (data.error || '轉錄失敗'));
                 document.getElementById('progress').style.display = 'none';
                 return;
             }
             task_id = data.task_id;
         } catch (err) {
-            document.getElementById('result').textContent = '連線錯誤';
+            showOriginResult('連線錯誤');
             document.getElementById('progress').style.display = 'none';
             return;
         }
-        // 輪詢進度
         async function pollProgress() {
             try {
                 const res = await fetch(`/api/progress/${task_id}`);
@@ -150,9 +159,9 @@
                 document.getElementById('progress-bar').style.width = data.progress + '%';
                 if(data.done) {
                     if(data.result) {
-                        document.getElementById('result').textContent = data.result;
+                        showOriginResult(data.result);
                     } else if(data.error) {
-                        document.getElementById('result').textContent = '錯誤：' + data.error;
+                        showOriginResult('錯誤：' + data.error);
                     }
                     document.getElementById('progress-bar').style.width = '100%';
                     return;
@@ -160,19 +169,15 @@
                     setTimeout(pollProgress, 800);
                 }
             } catch (err) {
-                document.getElementById('result').textContent = '連線錯誤';
+                showOriginResult('連線錯誤');
             }
         }
         pollProgress();
     });
 
-    const resultDiv = document.getElementById('result');
-    const copyBtn = document.getElementById('copy-btn');
-    const downloadWordBtn = document.getElementById('download-word-btn');
-
+    // 複製、下載按鈕改抓 origin-area
     copyBtn.addEventListener('click', () => {
-        // 只複製純文字內容
-        navigator.clipboard.writeText(resultDiv.textContent)
+        navigator.clipboard.writeText(document.getElementById('origin-area').textContent)
             .then(() => {
                 copyBtn.textContent = '已複製!';
                 setTimeout(() => { copyBtn.textContent = '複製'; }, 1200);
@@ -182,10 +187,8 @@
                 setTimeout(() => { copyBtn.textContent = '複製'; }, 1200);
             });
     });
-
     downloadWordBtn.addEventListener('click', async () => {
-        // 呼叫後端產生 docx 並下載
-        const text = resultDiv.textContent;
+        const text = document.getElementById('origin-area').textContent;
         if (!text.trim()) {
             alert('沒有內容可下載');
             return;
