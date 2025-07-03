@@ -44,6 +44,8 @@ button {
     margin-top: 8px;
     margin-bottom: 8px;
     transition: background 0.2s;
+    width: 180px;
+    min-width: unset;
 }
 button:disabled {
     background: #b3c7f7;
@@ -55,10 +57,7 @@ button:hover:not(:disabled) {
 
 #copy-btn {
     background: #45c2a9;
-    border-radius: 6px;
-    border: none;
     color: #fff;
-    cursor: pointer;
     transition: background 0.2s;
 }
 #copy-btn:hover {

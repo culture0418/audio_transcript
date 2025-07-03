@@ -39,14 +39,15 @@
             <input type="file" id="file-input" accept="audio/*">
         </div>
         <div class="file-info" id="file-info"></div>
-        <button id="transcribe-btn" disabled>執行轉錄</button>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+            <button id="transcribe-btn" disabled>執行轉錄</button>
+            <button id="copy-btn">複製</button>
+            <button id="download-word-btn">下載 Word</button>
+        </div>
         <div class="progress" id="progress" style="display:none;">
             <div class="progress-bar" id="progress-bar"></div>
         </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
         <div class="result" id="result"></div>
-        <button id="copy-btn" style="display:none; padding: 6px 16px; font-size:15px;">複製</button>
-        </div>
     </div>
 
     <script>
@@ -167,24 +168,7 @@
 
     const resultDiv = document.getElementById('result');
     const copyBtn = document.getElementById('copy-btn');
-
-    // 顯示結果後才顯示複製按鈕
-    function showCopyButtonIfHasResult() {
-        if (resultDiv.textContent && resultDiv.textContent.trim() !== '' && !resultDiv.textContent.startsWith('錯誤')) {
-            copyBtn.style.display = 'inline-block';
-        } else {
-            copyBtn.style.display = 'none';
-        }
-    }
-
-    // 每次結果內容變化後都檢查
-    const originSetText = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(resultDiv), 'textContent').set;
-    Object.defineProperty(resultDiv, 'textContent', {
-        set: function(value) {
-            originSetText.call(this, value);
-            showCopyButtonIfHasResult();
-        }
-    });
+    const downloadWordBtn = document.getElementById('download-word-btn');
 
     copyBtn.addEventListener('click', () => {
         // 只複製純文字內容
@@ -197,6 +181,37 @@
                 copyBtn.textContent = '複製失敗';
                 setTimeout(() => { copyBtn.textContent = '複製'; }, 1200);
             });
+    });
+
+    downloadWordBtn.addEventListener('click', async () => {
+        // 呼叫後端產生 docx 並下載
+        const text = resultDiv.textContent;
+        if (!text.trim()) {
+            alert('沒有內容可下載');
+            return;
+        }
+        try {
+            const res = await fetch('/api/generate_docx', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+            if (!res.ok) {
+                alert('產生 Word 檔案失敗');
+                return;
+            }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'transcription.docx';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            alert('下載失敗');
+        }
     });
 
     </script>

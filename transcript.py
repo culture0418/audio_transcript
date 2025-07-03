@@ -12,7 +12,7 @@ class AudioTranscription:
         # 模擬進度條到 70%
         total_steps = 10
         for i in range(total_steps):
-            time.sleep(3)  # 可依實際情況調整
+            time.sleep(5)  # 可依實際情況調整
             if progress_callback:
                 progress_callback(int((i+1)/total_steps*70))
         # 實際轉錄

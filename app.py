@@ -1,10 +1,12 @@
-from flask import Flask, request, jsonify, send_from_directory, render_template
+from flask import Flask, request, jsonify, send_from_directory, render_template, send_file
 from db import DB
 from transcript import AudioTranscription
 import os
 from werkzeug.utils import secure_filename
 import threading
 import uuid
+import io
+from docx import Document
 
 app = Flask(__name__, static_folder='static')
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -86,6 +88,19 @@ def download(filename):
 def root():
     print('Serving index.html from templates')
     return render_template('index.html')
+
+@app.route('/api/generate_docx', methods=['POST'])
+def generate_docx():
+    data = request.json
+    text = data.get('text', '')
+    if not text.strip():
+        return jsonify({'success': False, 'error': '沒有內容'}), 400
+    doc = Document()
+    doc.add_paragraph(text)
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+    return send_file(buf, mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document', as_attachment=True, download_name='transcription.docx')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
